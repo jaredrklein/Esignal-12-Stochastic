@@ -1,0 +1,74 @@
+var vStoch = null
+var lastrawtime = 0;
+var BarCount = 0;
+
+function preMain() {
+    setStudyTitle("Stochastic");
+    setCursorLabelName("%K", 0);
+    setCursorLabelName("%D", 1);
+    setDefaultBarStyle(PS_SOLID, 0);
+    setDefaultBarStyle(PS_SOLID, 1);
+    setDefaultBarFgColor(Color.cyan, 0);
+    setDefaultBarFgColor(Color.red, 1);
+    setDefaultBarThickness(1, 0);
+    setDefaultBarThickness(1, 1);
+    setPlotType(PLOTTYPE_LINE, 0);
+    setPlotType(PLOTTYPE_LINE, 1);
+        
+    var fp1 = new FunctionParameter("K", FunctionParameter.NUMBER);
+	fp1.setLowerLimit(1);		
+	fp1.setDefault(14); //Edit this value to set a new default
+	
+    var fp2 = new FunctionParameter("Fast", FunctionParameter.NUMBER);
+	fp2.setLowerLimit(1);	
+	fp2.setDefault(3); //Edit this value to set a new default
+    
+    var fp3 = new FunctionParameter("Slow", FunctionParameter.NUMBER);
+	fp3.setLowerLimit(1);	
+	fp3.setDefault(3); //Edit this value to set a new default
+	
+    var fp4 = new FunctionParameter("Upper", FunctionParameter.NUMBER);
+	fp4.setLowerLimit(0);	
+	fp4.setDefault(80); //Edit this value to set a new default
+	
+    var fp5 = new FunctionParameter("Lower", FunctionParameter.NUMBER);
+	fp5.setLowerLimit(0);	
+	fp5.setDefault(20); //Edit this value to set a new default
+	
+}
+
+function main(K,Fast,Slow,Upper,Lower) {
+    
+    if(vStoch==null) vStoch = new StochStudy(K, Fast, Slow);
+    addBand( Upper, PS_DASH, 1, Color.grey,2);
+    addBand( Lower, PS_DASH, 1, Color.grey,3);
+   
+    if (lastrawtime != getValue("rawtime", 0)) {
+     BarCount += 1;
+     lastrawtime = getValue("rawtime", 0);
+    }    
+
+    if(vStoch.getValue(StochStudy.FAST,-1)<vStoch.getValue(StochStudy.SLOW,-1) &&
+       vStoch.getValue(StochStudy.FAST)>vStoch.getValue(StochStudy.SLOW)){
+        Alert.playSound("alert.wav");
+    Alert.addToList(getSymbol()+" "+getInterval(),"Crossing Up " ,Color.black,Color.red);
+       drawShapeRelative(0,vStoch.getValue(StochStudy.FAST,-1),Shape.UPARROW,"",Color.green,null,"Up"+ BarCount);
+
+       }else{
+       removeShape("Up"+BarCount);
+       }
+    if(vStoch.getValue(StochStudy.FAST,-1)>vStoch.getValue(StochStudy.SLOW,-1) &&
+       vStoch.getValue(StochStudy.FAST)<vStoch.getValue(StochStudy.SLOW)){
+        Alert.playSound("alert.wav");
+        Alert.addToList(getSymbol()+" "+getInterval(),"Crossing Down",Color.black,Color.red);
+       drawShapeRelative(0,vStoch.getValue(StochStudy.FAST,-1),Shape.DOWNARROW,"",Color.red,null,"Dn"+ BarCount);
+       
+       }else{
+       removeShape("Dn"+BarCount);
+       }
+   
+   
+return new Array(vStoch.getValue(StochStudy.FAST),vStoch.getValue(StochStudy.SLOW));
+
+}
+

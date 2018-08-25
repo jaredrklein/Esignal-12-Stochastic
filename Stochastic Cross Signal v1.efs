@@ -1,8 +1,10 @@
+//Only run on eSignal Version 12
 var vStoch = null
 var lastrawtime = 0;
 var BarCount = 0;
 
 function preMain() {
+//Setting color,line,naming preferences 
     setStudyTitle("Stochastic Monitor");
     setCursorLabelName("%K", 0);
     setCursorLabelName("%D", 1);
@@ -15,7 +17,7 @@ function preMain() {
     setPlotType(PLOTTYPE_LINE, 0);
     setPlotType(PLOTTYPE_LINE, 1);
 
-//paramters set to default change in chart settings        
+//parameters set to default change in chart settings        
     var fp1 = new FunctionParameter("K", FunctionParameter.NUMBER);
 	fp1.setLowerLimit(1);		
 	fp1.setDefault(14); //Edit this value to set a new default
@@ -52,7 +54,7 @@ function main(K,Fast,Slow,Upper,Lower) {
     if(vStoch.getValue(StochStudy.FAST,-1)<vStoch.getValue(StochStudy.SLOW,-1) &&
        vStoch.getValue(StochStudy.FAST)>vStoch.getValue(StochStudy.SLOW)){
         Alert.playSound("alert.wav");
-    Alert.addToList(getSymbol()+" "+getInterval(),"Crossing Up " ,Color.black,Color.red);
+    	Alert.addToList(getSymbol()+" "+getInterval(),"Crossing Up " ,Color.black,Color.red);
        drawShapeRelative(0,vStoch.getValue(StochStudy.FAST,-1),Shape.UPARROW,"",Color.cyan,null,"Up"+ BarCount);
 
        }else{

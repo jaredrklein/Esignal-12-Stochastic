@@ -1,4 +1,7 @@
-//Only run on eSignal Version 12
+/*Only run on eSignal Version 12
+Needs alert code updated to email, possible problem with email adress have to use
+solution: ISP given email?
+*/
 var vStoch = null
 var lastrawtime = 0;
 var BarCount = 0;

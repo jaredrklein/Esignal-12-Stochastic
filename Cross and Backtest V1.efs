@@ -1,0 +1,175 @@
+/*Only run in eSignal Version 12
+Needs to be updated on comparison code is finished
+Wont run on newest bar: 300/300
+*/
+var vStoch = null
+var lastrawtime = 0;
+var BarCount = 0;
+var vFlag1 = false;
+var vFlag2 = false;
+var fpArray = new Array();
+var bInit = false;
+var xStochK = null;
+var xStochD = null;
+var vHour; 
+var vMin; 
+var vSec; 
+var vDay; 
+var vMonth;
+//user decided time end variables, might add to default list
+var vStartHour = 5; 
+var vStartMin = 30; 
+var vEndHour = 14; 
+var vEndMin = 30;
+//Pre main function
+function preMain() {
+//setting up the labels, views, and colors
+    setStudyTitle("Stochastic Cross and Backtest");
+    setCursorLabelName("%K", 0);
+    setCursorLabelName("%D", 1);
+    setDefaultBarStyle(PS_SOLID, 0);
+    setDefaultBarStyle(PS_SOLID, 1);
+    setDefaultBarFgColor(Color.cyan, 0);
+    setDefaultBarFgColor(Color.red, 1);
+    setDefaultBarThickness(1, 0);
+    setDefaultBarThickness(1, 1);
+    setPlotType(PLOTTYPE_LINE, 0);
+    setPlotType(PLOTTYPE_LINE, 1);
+    setDefaultPriceBarColor(Color.red);
+    var x = 0;
+//function parameters that are changable under Edit Chart
+    fpArray[x] = new FunctionParameter("K", FunctionParameter.NUMBER);
+    with(fpArray[x++]) {
+        setLowerLimit(1);
+        setDefault(14);
+    }    
+    fpArray[x] = new FunctionParameter("Fast", FunctionParameter.NUMBER);
+    with(fpArray[x++]) {
+        setLowerLimit(1);
+        setDefault(3);
+    }    
+    fpArray[x] = new FunctionParameter("Slow", FunctionParameter.NUMBER);
+    with(fpArray[x++]) {
+        setLowerLimit(1);
+        setDefault(3);
+    }    
+    fpArray[x] = new FunctionParameter("Upper", FunctionParameter.NUMBER);
+    with(fpArray[x++]) {
+        setLowerLimit(1);
+        setDefault(20);
+    }    
+    fpArray[x] = new FunctionParameter("Lower", FunctionParameter.NUMBER);
+    with(fpArray[x++]) {
+        setLowerLimit(1);
+        setDefault(80);
+    }    
+
+}
+//Main Function
+function main(K,Fast,Slow,Upper,Lower) {
+//setting Stochastic study and adding the upper/lower band
+    if(vStoch==null) vStoch = new StochStudy(K, Fast, Slow);
+    addBand( Upper, PS_DASH, 1, Color.grey,2);
+    addBand( Lower, PS_DASH, 1, Color.grey,3);
+//setting up rawtime
+    if (lastrawtime != getValue("rawtime", 0)) {
+     BarCount += 1;
+     lastrawtime = getValue("rawtime", 0);
+    }   
+//default values for K, Fast, Slow, Upper, Lower
+    var nBarState = getBarState();
+    if (nBarState == BARSTATE_ALLBARS) {
+        if (K == null) K = 14;
+        if (Fast == null) Fast = 3;
+        if (Slow == null) Slow = 3;
+        if (Upper == null) Upper = 80;
+        if (Lower == null) Lower = 20;
+    }
+
+//getting the time  variables
+  var vTime = new Date(); 
+  vTime = getValue("Time", 0); 
+  vHour = vTime.getHours(); 
+  vMin = vTime.getMinutes(); 
+  vSec = vTime.getSeconds(); 
+  vDay = vTime.getDate(); 
+  vMonth = vTime.getMonth() +1;
+
+//flag statement for backtesting
+    if (bInit == false) {
+        xStochK = stochK(K, Fast, Slow);
+        xStochD = stochD(K, Fast, Slow);        
+        bInit = true;
+    }
+//if loop with backtesting
+   if(getCurrentBarIndex() == 0) return;
+	var vFast = xStochK.getValue(0);
+	var vSlow = xStochD.getValue(0);
+	if(vFast == null || vSlow == null)	return;
+
+if (((vHour > vStartHour) && (vHour < vEndHour)) || ((vHour == vStartHour) && (vMin >= vStartMin)) || ((vHour == vEndHour) && (vMin <= vEndMin)) ) {
+        
+//entering long
+	if(vFast < vSlow && vFast > Upper && vSlow > Upper && !Strategy.isLong())
+		Strategy.doLong("Long", Strategy.MARKET, Strategy.NEXTBAR);
+//selling Long
+        if(Strategy.isLong()==true){
+            Strategy.doSell("Closeout Long",Strategy.STOP,Strategy.THISBAR,Strategy.ALL,close(-1));
+        }
+//entering Short        
+        if(vFast >= vSlow && vFast < Lower && vSlow < Lower && !Strategy.isShort())
+		Strategy.doShort("Short", Strategy.MARKET, Strategy.NEXTBAR);
+//selling Short 
+        if(Strategy.isShort()==true){
+            Strategy.doCover("Closeout Short",Strategy.STOP,Strategy.THISBAR,Strategy.ALL,close(-1));
+        }
+/*End of Day sell        
+if ((vHour > vEndHour) || ((vHour == vEndHour) && (vMin > vEndMin)) ) {
+    if (Strategy.isLong()==true)
+      Strategy.doSell("EOD Long Exit",Strategy.STOP,Strategy.THISBAR,Strategy.ALL,close(-1)); 
+    if (Strategy.isShort()==true)
+      Strategy.doCover("EOD Short Exit",Strategy.STOP,Strategy.THISBAR,Strategy.ALL,close(-1)); 
+    }
+    */
+}
+
+//Coloring bars
+	if(Strategy.isLong())
+		setPriceBarColor(Color.lime);
+	else if(Strategy.isShort())
+		setPriceBarColor(Color.cyan);
+//visual graph arrows below
+    if(vStoch.getValue(StochStudy.FAST,-1)<vStoch.getValue(StochStudy.SLOW,-1) &&
+       vStoch.getValue(StochStudy.FAST)>vStoch.getValue(StochStudy.SLOW)){
+       //Alert.addToList(getSymbol()+" "+getInterval(),"Crossing Up " ,Color.black,Color.red);
+       drawShapeRelative(0,vStoch.getValue(StochStudy.FAST,-1),Shape.UPARROW,"",Color.green,null,"Up"+ BarCount);
+    //    vFlag1 = true;
+    //    var value1 = vStoch.getValue(StochStudy.FAST,-1);
+    // var value2 = vStoch.getValue(StochStudy.SLOW,-1);// or 0
+       }else{
+    //    vFlag1 = false;
+       removeShape("Up"+BarCount);
+       }
+      
+    if(vStoch.getValue(StochStudy.FAST,-1)>vStoch.getValue(StochStudy.SLOW,-1) &&
+       vStoch.getValue(StochStudy.FAST)<vStoch.getValue(StochStudy.SLOW)){
+    //Alert.addToList(getSymbol()+" "+getInterval(),"Crossing Down",Color.black,Color.red);
+    drawShapeRelative(0,vStoch.getValue(StochStudy.FAST,-1),Shape.DOWNARROW,"",Color.red,null,"Dn"+ BarCount);
+     //   vFlag1 = true;
+     //  var value2 = vStoch.getValue(StochStudy.FAST,-1);
+     //var value1 = vStoch.getValue(StochStudy.SLOW,-1);// or 0
+       }else{
+     //   vFlag1 = false; 
+       removeShape("Dn"+BarCount);
+       } 
+/*trying to compare points: Currently shows yellow arrow at the point, cant compare value
+   if( (vFlag1 = true && value1 != value2 ) ){
+    drawShapeRelative(0,vStoch.getValue(StochStudy.FAST,-1),Shape.UPARROW,"",Color.yellow,null,"Up"+ BarCount);
+           // debugPrintln("value1 = " + value1 + "\nvalue2 = " + value2);
+   }else{
+       }
+   */
+//returning the stochastic lines
+	return new Array(vStoch.getValue(StochStudy.FAST),vStoch.getValue(StochStudy.SLOW));
+}
+
